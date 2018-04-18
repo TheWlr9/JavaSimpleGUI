@@ -47,6 +47,11 @@ import javax.swing.*;
  *  ~ Removed many un-needed methods in particular some image rotational methods and text rotational methods
  *  ~ Made the scaling much better, only allowed to have a minimum of 0
  *  ~ Added some boolean methods for mouse and keyboard interactions
+ *
+ *  Bugs:
+ *  ~ If a window is resized during execution, the mouse methods get out of wack.
+ *    |Temporary fix: Don't resize window if using mouse methods (consider frame.setResizeable(false);), 
+ *     if you're not using mouse methods, don't worry about it.
  */
 
 public class WindowedGraphics implements MouseListener, MouseMotionListener, KeyListener {
