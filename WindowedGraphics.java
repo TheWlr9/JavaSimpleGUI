@@ -47,15 +47,15 @@ import javax.swing.*;
  *  ~ Removed many un-needed methods in particular some image rotational methods and text rotational methods
  *  ~ Made the scaling much better, only allowed to have a minimum of 0
  *  ~ Added some boolean methods for mouse and keyboard interactions
- *
+ *  
  *  Bugs:
- *  ~ If a window is resized during execution, the mouse methods get out of wack.
- *    |Temporary fix: Don't resize window if using mouse methods (consider frame.setResizeable(false);), 
- *     if you're not using mouse methods, don't worry about it.
+ *  ~Resizing the window during execution makes the mouse methods go wack.
+ *   |Temporary fixes: Don't resize the window during execution (consider frame.setResizeable(false);,
+ *                     or if you're not using mouse methods, don't worry about it.
  */
 
 public class WindowedGraphics implements MouseListener, MouseMotionListener, KeyListener {
-	
+ 
     // pre-defined colors
     public static final Color BLACK      = Color.BLACK;
     public static final Color BLUE       = Color.BLUE;
@@ -70,53 +70,60 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
     public static final Color RED        = Color.RED;
     public static final Color WHITE      = Color.WHITE;
     public static final Color YELLOW     = Color.YELLOW;
-	
+ 
     
     final private static double DEFAULT_XMIN = 0.0;
     final private static double DEFAULT_XMAX = 1.0;
     final private static double DEFAULT_YMIN = 0.0;
     final private static double DEFAULT_YMAX = 1.0;
-	final private static int DEFAULT_SIZE= 128;
-	final private static double DEFAULT_PEN_SIZE= 0.002;
-	final private static Font DEFAULT_FONT= new Font(Font.MONOSPACED, Font.PLAIN, 16);
-	
-	private boolean defer;
-	
-	Object keyLock= new Object();
-	Object mouseLock= new Object();
-	
-	private JFrame frame;
-	private Graphics2D onScreen, offScreen;
-	private BufferedImage onScreenImage;
-	private BufferedImage offScreenImage;
-	
-	private int width, height= DEFAULT_SIZE;
-	private double xmin,xmax,ymin,ymax;
-	private Color penColour;
-	private double penRadius;
-	private Font font;
-	
-	private boolean mousePressed;
-	private double mouseX, mouseY;
-	
-	private LinkedList<Character> keysTyped = new LinkedList<Character>();
-	private TreeSet<Integer> keysDown = new TreeSet<Integer>();
+ final private static int DEFAULT_SIZE= 128;
+ final private static double DEFAULT_PEN_SIZE= 0.002;
+ final private static Font DEFAULT_FONT= new Font(Font.MONOSPACED, Font.PLAIN, 16);
+ 
+ private boolean defer;
+ 
+ Object keyLock= new Object();
+ Object mouseLock= new Object();
+ 
+ private JFrame frame;
+ private Graphics2D onScreen, offScreen;
+ private BufferedImage onScreenImage;
+ private BufferedImage offScreenImage;
+ 
+ private int width, height= DEFAULT_SIZE;
+ private double xmin,xmax,ymin,ymax;
+ private Color penColour;
+ private double penRadius;
+ private Font font;
+ private String title;
+ 
+ private boolean mousePressed;
+ private double mouseX, mouseY;
+ 
+ private LinkedList<Character> keysTyped = new LinkedList<Character>();
+ private TreeSet<Integer> keysDown = new TreeSet<Integer>();
 
-	public WindowedGraphics() {
-		defer= false;
-		penColour= BLACK;
-		setSize();
-		
-		frame= new JFrame();
-		offScreenImage= new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
-		onScreenImage= new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
-		onScreen= onScreenImage.createGraphics();
-		offScreen= offScreenImage.createGraphics();
-		
-		setPenRadius(); //Must be called after offScreen is initialized
-		clear();
-		
-		
+ public WindowedGraphics(int widthGiven, int heightGiven) {
+   title= "WindowedGraphics";
+  defer= false;
+  penColour= BLACK;
+  setSize(widthGiven,heightGiven);
+  
+  frame= new JFrame();
+  offScreenImage= new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
+  onScreenImage= new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
+  onScreen= onScreenImage.createGraphics();
+  offScreen= offScreenImage.createGraphics();
+  
+  if(widthGiven==heightGiven)
+    setScale(0,widthGiven);
+  else
+    setScale(0,100);
+  
+  setPenRadius(); //Must be called after offScreen is initialized
+  clear();
+  
+  
         RenderingHints hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
         
@@ -130,17 +137,21 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
         offScreen.addRenderingHints(hints);
         frame.setResizable(true);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setTitle("WindowGraphics");
+        frame.setTitle(title);
         frame.requestFocusInWindow();
         frame.setVisible(true);
         frame.pack();
         frame.addMouseListener(this);
         frame.addMouseMotionListener(this);
         frame.addKeyListener(this);
+        //frame.setIconImage();
+        setFont();
+        setPenRadius();
+        setPenColour();
         
 
-	}
-	
+ }
+ 
     /**
      * Set the x-scale to be the default (between 0.0 and 1.0).
      */
@@ -167,6 +178,19 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
             ymax = max;
     }
     
+    /**
+     * Set the x-scale and y-scale (a 10% border is added to the values)
+     * @param min the minimum value of the x- and y-scales
+     * @param max the maximum value of the x- and y-scales
+     */
+    public void setScale(double min, double max) {
+        double size = max - min;
+        xmin = min;
+        xmax = max;
+        ymin = min;
+        ymax = max;
+    }
+    
     // helper functions that scale from user coordinates to screen coordinates and back
     private double scaleX(double x) { return width  * (x - xmin) / (xmax - xmin); }
     private double scaleY(double y) { return height * (ymax - y) / (ymax - ymin); }
@@ -174,65 +198,71 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
     private double factorY(double h) { return h * height / Math.abs(ymax - ymin);  }
     private double userX(double x) { return xmin + x * (xmax - xmin) / width;    }
     private double userY(double y) { return ymax - y * (ymax - ymin) / height;   }
-	
-	public void setPenRadius() {
-		setPenRadius(DEFAULT_PEN_SIZE);
-	}
-	
-	public void setPenRadius(double size) {
-		//Maybe add more options to the pen
+ 
+ public void setPenRadius() {
+  setPenRadius(DEFAULT_PEN_SIZE);
+ }
+ 
+ public void setPenRadius(double size) {
+  //Maybe add more options to the pen
         if (size < 0) throw new IllegalArgumentException("pen radius must be nonnegative");
         penRadius = size;
         float scaledPenRadius = (float) (size * DEFAULT_SIZE);
         BasicStroke stroke = new BasicStroke(scaledPenRadius, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
         // BasicStroke stroke = new BasicStroke(scaledPenRadius);
         offScreen.setStroke(stroke);
-	}
-	
-	public void setPenColour() {
-		setPenColour(BLACK);
-	}
-	
+ }
+ 
+ public void setPenColour() {
+  setPenColour(BLACK);
+ }
+ 
     public void setPenColor(int red, int green, int blue) {
         if (red   < 0 || red   >= 256) throw new IllegalArgumentException("amount of red must be between 0 and 255");
         if (green < 0 || green >= 256) throw new IllegalArgumentException("amount of green must be between 0 and 255");
         if (blue  < 0 || blue  >= 256) throw new IllegalArgumentException("amount of blue must be between 0 and 255");
         setPenColour(new Color(red, green, blue));
     }
-	
-	public void setPenColour(Color colour) {
+ 
+ public void setPenColour(Color colour) {
         penColour = colour;
         offScreen.setColor(penColour);
     }
-	
+ 
     public void setFont() { setFont(DEFAULT_FONT); }
 
     public void setFont(Font f) { font = f; }
-	
-	public void setSize() {
-		setSize(DEFAULT_SIZE,DEFAULT_SIZE);
-	}
-	
-	public void setSize(int width, int height) {
-		if (width < 1 || height < 1) throw new IllegalArgumentException("width and height must be positive");
-		this.width= width;
-		xmax= width;
-		this.height=height;
-		ymax= height;
-	}
-	
-	public void clear() {
-		clear(WHITE);
-	}
-	
-	public void clear(Color color) {
-		offScreen.setColor(color);
-		offScreen.fillRect(0,0,width,height);
-		offScreen.setColor(penColour);
-		
-		draw();
-	}
-	
+ 
+ public void setSize() {
+  setSize(DEFAULT_SIZE,DEFAULT_SIZE);
+ }
+ 
+ public void setSize(int width, int height) {
+  if (width < 1 || height < 1) throw new IllegalArgumentException("width and height must be positive");
+  this.width= width;
+  xmax= width;
+  this.height=height;
+  ymax= height;
+ }
+ 
+  public void setTitle(String title) {
+  this.title= title;
+  
+  frame.setTitle(title);
+ }
+ 
+ public void clear() {
+  clear(WHITE);
+ }
+ 
+ public void clear(Color color) {
+  offScreen.setColor(color);
+  offScreen.fillRect(0,0,width,height);
+  offScreen.setColor(penColour);
+  
+  draw();
+ }
+ 
     /**
      * Display on screen, pause for t milliseconds, and turn on
      * <em>animation mode</em>: subsequent calls to
@@ -264,7 +294,7 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
         draw();
     }
 
-	
+ 
     private void draw() {
         if (defer) return;
         onScreen.drawImage(offScreenImage, 0, 0, null);
@@ -277,7 +307,7 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
      * @return whether the current frame exists
      */
     public boolean exists() {
-    	return frame.isDisplayable();
+     return frame.isDisplayable();
     }
     
     
@@ -497,7 +527,6 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
          if (halfHeight < 0) throw new IllegalArgumentException("half height must be nonnegative");
          double xs = scaleX(x);
          double ys = scaleY(y);
-         System.out.println(ys);
          double ws = factorX(2*halfWidth);
          double hs = factorY(2*halfHeight);
          if (ws <= 1 && hs <= 1) pixel(x, y);
@@ -589,6 +618,35 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
           draw();
       }
       
+      /**
+       * Draw picture (gif, jpg, or png) centered on (x, y), rescaled to w-by-h.
+       * @param x the center x coordinate of the image
+       * @param y the center y coordinate of the image
+       * @param s the name of the image/picture, e.g., "ball.gif"
+       * @param w the width of the image
+       * @param h the height of the image
+       * @throws IllegalArgumentException if the width height are negative
+       * @throws IllegalArgumentException if the image is corrupt
+       */
+      public void picture(double x, double y, String s, double w, double h) {
+          Image image = getImage(s);
+          double xs = scaleX(x);
+          double ys = scaleY(y);
+          if (w < 0) throw new IllegalArgumentException("width is negative: " + w);
+          if (h < 0) throw new IllegalArgumentException("height is negative: " + h);
+          double ws = factorX(w);
+          double hs = factorY(h);
+          if (ws < 0 || hs < 0) throw new IllegalArgumentException("image " + s + " is corrupt");
+          if (ws <= 1 && hs <= 1) pixel(x, y); //Kind of for fun lol!!!
+          else {
+              offScreen.drawImage(image, (int) Math.round(xs - ws/2.0),
+                                         (int) Math.round(ys - hs/2.0),
+                                         (int) Math.round(ws),
+                                         (int) Math.round(hs), null);
+          }
+          draw();
+      }
+      
       
       
       
@@ -633,99 +691,99 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
        }
      
      
-	
-	
-	/*************************************************************************
-	 * 						Mouse stuff
-	 *************************************************************************/
-	
-	
-	public double mouseX() {
-		synchronized(mouseLock) {
-			return mouseX-8;
-		}
-	}
-	public double mouseY() {
-		synchronized(mouseLock) {
-			return mouseY-32;
-		}
-	}
-	
-	public boolean isMousePressed() {
-		synchronized(mouseLock) {
-			return mousePressed;
-		}
-	}
-	
-	public void mouseClicked(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		synchronized(mouseLock) {
-			
-		}
-	}
+ 
+ 
+ /*************************************************************************
+  *       Mouse stuff
+  *************************************************************************/
+ 
+ 
+ public double mouseX() {
+  synchronized(mouseLock) {
+   return mouseX-8;
+  }
+ }
+ public double mouseY() {
+  synchronized(mouseLock) {
+   return mouseY-32;
+  }
+ }
+ 
+ public boolean isMousePressed() {
+  synchronized(mouseLock) {
+   return mousePressed;
+  }
+ }
+ 
+ public void mouseClicked(MouseEvent arg0) {
+  // TODO Auto-generated method stub
+  synchronized(mouseLock) {
+   
+  }
+ }
 
-	public void mouseEntered(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		synchronized(mouseLock) {
-			
-		}
-	}
+ public void mouseEntered(MouseEvent arg0) {
+  // TODO Auto-generated method stub
+  synchronized(mouseLock) {
+   
+  }
+ }
 
-	public void mouseExited(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		synchronized(mouseLock) {
-			
-		}
-	}
+ public void mouseExited(MouseEvent arg0) {
+  // TODO Auto-generated method stub
+  synchronized(mouseLock) {
+   
+  }
+ }
 
-	public void mousePressed(MouseEvent arg0) {
-		synchronized(mouseLock) {
-			mousePressed= true;
-		}
-	}
+ public void mousePressed(MouseEvent arg0) {
+  synchronized(mouseLock) {
+   mousePressed= true;
+  }
+ }
 
-	public void mouseReleased(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		synchronized(mouseLock) {
-			mousePressed= false;
-		}
-	}
+ public void mouseReleased(MouseEvent arg0) {
+  // TODO Auto-generated method stub
+  synchronized(mouseLock) {
+   mousePressed= false;
+  }
+ }
 
-	@Override
-	public void mouseDragged(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		synchronized(mouseLock) {
-			mousePressed= true;
-			mouseX= arg0.getX();
-			mouseY= arg0.getY();
-		}
-	}
+ @Override
+ public void mouseDragged(MouseEvent arg0) {
+  // TODO Auto-generated method stub
+  synchronized(mouseLock) {
+   mousePressed= true;
+   mouseX= arg0.getX();
+   mouseY= arg0.getY();
+  }
+ }
 
-	@Override
-	public void mouseMoved(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		synchronized(mouseLock) {
-			mouseX= arg0.getX();
-			mouseY= arg0.getY();
-		}
-	}
+ @Override
+ public void mouseMoved(MouseEvent arg0) {
+  // TODO Auto-generated method stub
+  synchronized(mouseLock) {
+   mouseX= arg0.getX();
+   mouseY= arg0.getY();
+  }
+ }
 
-	
-	
-	/******************************************************************
-	 * 							Keyboard stuff
-	 ******************************************************************/
-	
-	
-	
-	/**
+ 
+ 
+ /******************************************************************
+  *        Keyboard stuff
+  ******************************************************************/
+ 
+ 
+ 
+ /**
      * Has the user typed a key?
      * @return true if the user has typed a key, false otherwise
      */
     public boolean hasNextKeyTyped() {
-    	synchronized(keyLock) {
-    		return !keysTyped.isEmpty();
-    	}
+     synchronized(keyLock) {
+      return !keysTyped.isEmpty();
+     }
     }
 
     /**
@@ -736,9 +794,9 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
      * @return the next Unicode key typed
      */
     public char nextKeyTyped() {
-    	synchronized(keyLock) {
-    		return keysTyped.removeLast();
-    	}
+     synchronized(keyLock) {
+      return keysTyped.removeLast();
+     }
     }
 
     /**
@@ -750,9 +808,9 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
      * @return true if keycode is currently being pressed, false otherwise
      */
     public boolean isKeyPressed(int keycode) {
-    	synchronized(keyLock) {
-    		return keysDown.contains(keycode);
-    	}
+     synchronized(keyLock) {
+      return keysDown.contains(keycode);
+     }
     }
 
 
@@ -760,27 +818,27 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
      * This method cannot be called directly.
      */
     public void keyTyped(KeyEvent e) {
-    	synchronized(keyLock) {
-    		keysTyped.addFirst(e.getKeyChar());
-    	}
+     synchronized(keyLock) {
+      keysTyped.addFirst(e.getKeyChar());
+     }
     }
 
     /**
      * This method cannot be called directly.
      */
     public void keyPressed(KeyEvent e) {
-    	synchronized(keyLock){
-    		keysDown.add(e.getKeyCode());
-    	}
+     synchronized(keyLock){
+      keysDown.add(e.getKeyCode());
+     }
     }
 
     /**
      * This method cannot be called directly.
      */
     public void keyReleased(KeyEvent e) {
-    	synchronized(keyLock) {
-    		keysDown.remove(e.getKeyCode());
-    	}
+     synchronized(keyLock) {
+      keysDown.remove(e.getKeyCode());
+     }
     }
 }
 
