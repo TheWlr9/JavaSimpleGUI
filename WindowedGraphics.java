@@ -179,7 +179,7 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
     }
     
     /**
-     * Set the x-scale and y-scale (a 10% border is added to the values)
+     * Set the x-scale and y-scale
      * @param min the minimum value of the x- and y-scales
      * @param max the maximum value of the x- and y-scales
      */
