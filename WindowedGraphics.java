@@ -1,4 +1,3 @@
-
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
@@ -41,12 +40,15 @@ import javax.swing.*;
  *  @author Robert Sedgewick
  *  @author Kevin Wayne
  *  @author William Ritchie
+ *  @version 1.2.5
  *  
  *  Modified by: William Ritchie
  *  ~ Made everything instantiable. No more class methods!
  *  ~ Removed many un-needed methods in particular some image rotational methods and text rotational methods
  *  ~ Made the scaling much better, only allowed to have a minimum of 0
  *  ~ Added some boolean methods for mouse and keyboard interactions
+ *  
+ *  ~ Fixed the scale methods
  *  
  *  Bugs:
  *  ~Resizing the window during execution makes the mouse methods go wack.
@@ -192,8 +194,8 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
     }
     
     // helper functions that scale from user coordinates to screen coordinates and back
-    private double scaleX(double x) { return width  * (x - xmin) / (xmax - xmin); }
-    private double scaleY(double y) { return height * (ymax - y) / (ymax - ymin); }
+    private double scaleX(double x) { return x;} //width  * (x - xmin) / (xmax - xmin); }
+    private double scaleY(double y) { return y;} //height * (ymax - y) / (ymax - ymin); }
     private double factorX(double w) { return w * width  / Math.abs(xmax - xmin);  }
     private double factorY(double h) { return h * height / Math.abs(ymax - ymin);  }
     private double userX(double x) { return xmin + x * (xmax - xmin) / width;    }
