@@ -40,7 +40,7 @@ import javax.swing.*;
  *  @author Robert Sedgewick
  *  @author Kevin Wayne
  *  @author William Ritchie
- *  @version 1.2.5
+ *  @version 1.2.8
  *  
  *  Modified by: William Ritchie
  *  ~ Made everything instantiable. No more class methods!
@@ -49,6 +49,8 @@ import javax.swing.*;
  *  ~ Added some boolean methods for mouse and keyboard interactions
  *  
  *  ~ Fixed the scale methods
+ *  ~ Fixed scaling
+ *  ~ Fixed mouse coordinates
  *  
  *  Bugs:
  *  ~Resizing the window during execution makes the mouse methods go wack.
@@ -79,7 +81,7 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
     final private static double DEFAULT_YMIN = 0.0;
     final private static double DEFAULT_YMAX = 1.0;
  final private static int DEFAULT_SIZE= 128;
- final private static double DEFAULT_PEN_SIZE= 0.002;
+ final private static double DEFAULT_PEN_SIZE= 1;//0.002;
  final private static Font DEFAULT_FONT= new Font(Font.MONOSPACED, Font.PLAIN, 16);
  
  private boolean defer;
@@ -143,8 +145,8 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
         frame.requestFocusInWindow();
         frame.setVisible(true);
         frame.pack();
-        frame.addMouseListener(this);
-        frame.addMouseMotionListener(this);
+        draw.addMouseListener(this);
+        draw.addMouseMotionListener(this);
         frame.addKeyListener(this);
         //frame.setIconImage();
         setFont();
@@ -196,8 +198,8 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
     // helper functions that scale from user coordinates to screen coordinates and back
     private double scaleX(double x) { return x;} //width  * (x - xmin) / (xmax - xmin); }
     private double scaleY(double y) { return y;} //height * (ymax - y) / (ymax - ymin); }
-    private double factorX(double w) { return w * width  / Math.abs(xmax - xmin);  }
-    private double factorY(double h) { return h * height / Math.abs(ymax - ymin);  }
+    private double factorX(double w) { return w;} // * width  / Math.abs(xmax - xmin);  }
+    private double factorY(double h) { return h;} // * height / Math.abs(ymax - ymin);  }
     private double userX(double x) { return xmin + x * (xmax - xmin) / width;    }
     private double userY(double y) { return ymax - y * (ymax - ymin) / height;   }
  
@@ -209,7 +211,7 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
   //Maybe add more options to the pen
         if (size < 0) throw new IllegalArgumentException("pen radius must be nonnegative");
         penRadius = size;
-        float scaledPenRadius = (float) (size * DEFAULT_SIZE);
+        float scaledPenRadius = (float) (size*2); //* DEFAULT_SIZE);
         BasicStroke stroke = new BasicStroke(scaledPenRadius, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
         // BasicStroke stroke = new BasicStroke(scaledPenRadius);
         offScreen.setStroke(stroke);
@@ -230,6 +232,10 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
         penColour = colour;
         offScreen.setColor(penColour);
     }
+ 
+ public Color getPenColour(){
+  return penColour;
+ }
  
     public void setFont() { setFont(DEFAULT_FONT); }
 
