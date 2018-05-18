@@ -317,7 +317,22 @@ public class WindowedGraphics implements MouseListener, MouseMotionListener, Key
     public boolean exists() {
      return frame.isDisplayable();
     }
+ 
+    /**
+     * Closes the window
+     */
+    public void close(){
+     if(exists())
+      frame.dispose();
+    }
     
+    /**
+     * @return the frame that is being used by this window
+     */
+    public JFrame getFrame(){
+     return frame;
+    }
+ 
     
     
     /*************************************************************************
